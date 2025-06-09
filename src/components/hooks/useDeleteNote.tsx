@@ -5,11 +5,9 @@ export const useDeleteNote = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => deleteNote(id),
+    mutationFn: deleteNote,
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        predicate: (query) => query.queryKey[0] === 'notes',
-      });
+      queryClient.invalidateQueries({ queryKey: ['notes'] });
     },
   });
 };

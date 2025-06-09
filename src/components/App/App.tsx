@@ -1,18 +1,23 @@
-import React, { useState } from 'react';
-import NoteList from '../NoteList/NoteList';
-import Pagination from '../Pagination/Pagination';
-import SearchBox from '../SearchBox/SearchBox';
-import NoteModal from '../NoteModal/NoteModal';
-import css from './App.module.css';
+import { useState } from 'react';
+import { useDebounce } from 'use-debounce';
+import { useNotes } from '../hooks/UseNotes';
+import NoteList from '../../components/NoteList/NoteList';
+import SearchBox from '../../components/SearchBox/SearchBox';
+import NoteForm from '../../components/NoteForm/NoteForm';
+import NoteModal from '../../components/NoteModal/NoteModal';
+import Pagination from '../../components/Pagination/Pagination';
 
-const App: React.FC = () => {
-  const [isModalOpen, setModalOpen] = useState(false);
+
+const App = () => {
   const [search, setSearch] = useState('');
+  const [debouncedSearch] = useDebounce(search, 300);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const handleSearch = (searchValue: string) => {
-    setSearch(searchValue);
+  const { data, isLoading, isError } = useNotes(debouncedSearch, currentPage);
+
+  const handleSearch = (value: string) => {
+    setSearch(value);
     setCurrentPage(1);
   };
 
@@ -20,29 +25,33 @@ const App: React.FC = () => {
     setCurrentPage(page);
   };
 
+  const openModal = () => setIsModalOpen(true);
+  const closeModal = () => setIsModalOpen(false);
+
   return (
-    <div className={css.app}>
-      <header className={css.toolbar}>
-        <SearchBox onSearch={handleSearch} />
-        {totalPages > 1 && (
+    <div>
+      <button onClick={openModal}>Add Note</button>
+      <SearchBox search={search} onSearch={handleSearch} />
+
+      {isLoading && <p>Loading notes...</p>}
+      {isError && <p>Failed to load notes.</p>}
+
+      {data && (
+        <>
+          <NoteList notes={data.notes} />
           <Pagination
-            totalPages={totalPages}
             currentPage={currentPage}
+            totalPages={data.totalPages}
             onPageChange={handlePageChange}
           />
-        )}
-        <button className={css.button} onClick={() => setModalOpen(true)}>
-          Create note +
-        </button>
-      </header>
+        </>
+      )}
 
-      <NoteList
-        search={search}
-        currentPage={currentPage}
-        setTotalPages={setTotalPages}
-      />
-
-      {isModalOpen && <NoteModal onClose={() => setModalOpen(false)} />}
+      {isModalOpen && (
+        <NoteModal onClose={closeModal}>
+          <NoteForm onClose={closeModal} />
+        </NoteModal>
+      )}
     </div>
   );
 };
