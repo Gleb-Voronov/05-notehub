@@ -1,36 +1,50 @@
-import axios from 'axios';
-import { Note, FetchNotesResponse } from '../types/note';
+import axios from "axios"
+import type { Note } from "../types/note";
 
-const BASE_URL = 'https://notehub-public.goit.study/api';
+const API_KEY = import.meta.env.VITE_NOTEHUB_TOKEN;
+const API_URL = 'https://notehub-public.goit.study/api/notes';
 
-const token = import.meta.env.VITE_NOTEHUB_TOKEN;
+export interface NotesResponse {
+  notes: Note[];
+  totalPages: number;
+}
 
-axios.defaults.baseURL = BASE_URL;
-axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+export interface NewNoteData {
+  title: string;
+  content: string;
+  tag: string;
+}
 
-export const fetchNotes = async (
-  search: string,
-  page: number
-): Promise<FetchNotesResponse> => {
-  const params: Record<string, string | number> = {
-    page,
-    perPage: 12,
-  };
-
-  if (search.trim()) {
-    params.search = search.trim();
+export const fetchNotes = async (search: string, page: number): Promise<NotesResponse> => {
+  const params: Record<string, string | number> = { page };
+  if (search) {
+    params.search = search;
   }
 
-  const { data } = await axios.get<FetchNotesResponse>('/notes', { params });
-  return data;
+  const response = await axios.get<NotesResponse>(API_URL, {
+    params,
+    headers: {
+      Authorization: `Bearer ${API_KEY}`,
+    },
+  });
+
+  return response.data;
 };
 
-export const createNote = async (note: Omit<Note, 'id'>): Promise<Note> => {
-  const { data } = await axios.post<Note>('/notes', note);
-  return data;
+export const createNote = async (newNoteData: NewNoteData): Promise<Note> => {
+  const response = await axios.post<Note>(API_URL, newNoteData, {
+      headers: {
+          Authorization: `Bearer ${API_KEY}`
+      },
+  });
+  return response.data;
 };
 
-export const deleteNote = async (id: number): Promise<Note> => {
-  const { data } = await axios.delete<Note>(`/notes/${id}`);
-  return data;
+export const deleteNote = async (noteId: number): Promise<Note> => {
+  const response = await axios.delete<Note>(`${API_URL}/${noteId}`, {
+      headers: {
+          Authorization: `Bearer ${API_KEY}`
+      },
+  });
+  return response.data;
 };

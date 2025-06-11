@@ -1,59 +1,59 @@
 import { useState } from 'react';
+import NoteList from '../NoteList/NoteList';
+import css from './App.module.css';
+import Pagination from '../Pagination/Pagination';
+import SearchBox from '../SearchBox/SearchBox';
+import NoteModal from '../NoteModal/NoteModal';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { fetchNotes } from '../../services/noteService';
 import { useDebounce } from 'use-debounce';
-import { useNotes } from '../hooks/UseNotes';
-import NoteList from '../../components/NoteList/NoteList';
-import SearchBox from '../../components/SearchBox/SearchBox';
-import NoteForm from '../../components/NoteForm/NoteForm';
-import NoteModal from '../../components/NoteModal/NoteModal';
-import Pagination from '../../components/Pagination/Pagination';
 
-
-const App = () => {
-  const [search, setSearch] = useState('');
-  const [debouncedSearch] = useDebounce(search, 300);
+function App() {
+  const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [debouncedSearchQuery] = useDebounce(searchQuery, 300);
 
-  const { data, isLoading, isError } = useNotes(debouncedSearch, currentPage);
+  const { data } = useQuery({
+    queryKey: ['notes', debouncedSearchQuery, currentPage],
+    queryFn: () => fetchNotes(debouncedSearchQuery || '', currentPage),
+    placeholderData: keepPreviousData,
+  });
 
-  const handleSearch = (value: string) => {
-    setSearch(value);
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
     setCurrentPage(1);
   };
 
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
+  const openModal = () => {
+    setIsModalOpen(true);
   };
 
-  const openModal = () => setIsModalOpen(true);
-  const closeModal = () => setIsModalOpen(false);
+  const closeModal = () => {
+    setIsModalOpen(false);
+  };
+  
+  const notes = data?.notes;
 
   return (
-    <div>
-      <button onClick={openModal}>Add Note</button>
-      <SearchBox search={search} onSearch={handleSearch} />
-
-      {isLoading && <p>Loading notes...</p>}
-      {isError && <p>Failed to load notes.</p>}
-
-      {data && (
-        <>
-          <NoteList notes={data.notes} />
+    <div className={css.app}>
+      <header className={css.toolbar}>
+        <SearchBox searchQuery={searchQuery} onChange={handleSearch} />
+        {data && data.totalPages > 1 && (
           <Pagination
             currentPage={currentPage}
+            onPageChange={setCurrentPage}
             totalPages={data.totalPages}
-            onPageChange={handlePageChange}
           />
-        </>
-      )}
-
-      {isModalOpen && (
-        <NoteModal onClose={closeModal}>
-          <NoteForm onClose={closeModal} />
-        </NoteModal>
-      )}
+        )}
+        <button className={css.button} onClick={openModal}>
+          Create note +
+        </button>
+      </header>
+      {notes && notes.length > 0 && <NoteList notes={notes} />}
+      {isModalOpen && <NoteModal onClose={closeModal} />}
     </div>
   );
-};
+}
 
 export default App;
